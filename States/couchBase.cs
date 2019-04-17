@@ -20,7 +20,7 @@ public class couchBase : couchState
             move.Jump();
 
         }
-        if (Input.GetButtonDown(Owner.interactButtonName) && actionBox.currentObject != null)
+        if (Input.GetButton(Owner.interactButtonName) && actionBox.currentObject != null)
         {
             if(interact.PickUp(actionBox.currentObject))
                 changeState(couchPlayer.state.Carry);
