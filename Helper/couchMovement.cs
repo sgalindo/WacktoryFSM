@@ -90,7 +90,7 @@ public class couchMovement : MonoBehaviour
     }
 
 
-    public void MovePlayer()
+    public void MovePlayer(float multiplier = 1)
     {
         // New vector3 with 0 y value since we dont care about that direction. 
         Vector3 rbVelocity = new Vector3(rb.velocity.x, 0, rb.velocity.z);
@@ -98,23 +98,25 @@ public class couchMovement : MonoBehaviour
         float temp = Mathf.Pow((magnitude - deadzone) / (1 - deadzone), 2);
 
         if (temp <= 0.5f)
-            moveSpeed = Mathf.Max(temp * maxMoveSpeed, 0.4f * maxMoveSpeed);
-        else if (moveSpeed < maxMoveSpeed)
+            moveSpeed = Mathf.Max(temp * maxMoveSpeed * multiplier, 0.4f * maxMoveSpeed * multiplier);
+        else if (moveSpeed < maxMoveSpeed * multiplier)
         {
             if (temp == 1)
                 moveSpeed += temp * acceleration;
-            if (moveSpeed >= maxMoveSpeed)
-                moveSpeed = maxMoveSpeed;
+            if (moveSpeed >= maxMoveSpeed * multiplier)
+                moveSpeed = maxMoveSpeed * multiplier;
         }
 
         // If our player has not reached their max speed (maxMoveSpeed), add movement to it.
         // Minimum magnitude needed from control sticks set to 0.2f specifically so slightly biased controllers don't automatically
         // move or rotate players and so there is not need for substantion deadzones on axes. Fixes controller feel quite a bit -Zack
-        if (movementInput.magnitude > deadzone && ((rbVelocity + movementInput).magnitude < maxMoveSpeed / 10 || (rbVelocity + movementInput).magnitude < rbVelocity.magnitude))
+        if (movementInput.magnitude > deadzone && ((rbVelocity + movementInput).magnitude < maxMoveSpeed * multiplier / 10 || (rbVelocity + movementInput).magnitude < rbVelocity.magnitude))
         {
             rb.AddForce(movementInput * moveSpeed);
         }
     }
+
+
 
     // Handle automatic turning
     bool justHappened = false;

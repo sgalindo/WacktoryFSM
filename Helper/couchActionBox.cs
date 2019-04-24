@@ -4,32 +4,31 @@ using UnityEngine;
 
 public class couchActionBox : MonoBehaviour
 {
+    private GameObject slatedObject;
     public GameObject currentObject;
     bool thisFrame;
-    private IEnumerator AfterTrigger;
-    private void Awake()
-    {
-        AfterTrigger = _WaitForFixedUpdate();
-        StartCoroutine(AfterTrigger);
-    }
+
+    private void Awake() { StartCoroutine(_WaitForFixedUpdate()); }
 
     private void FixedUpdate()
     {
         thisFrame = false;
+        slatedObject = null;
     }
 
     private void OnTriggerStay(Collider other)
     {
+        if (currentObject == other.gameObject) { thisFrame = true; return; }
+
         if (other.gameObject.tag == "grabbable" || other.gameObject.tag == "Interactable")
         {
-            if (currentObject != null)
+            if (slatedObject != null)
             {
-                if (currentObject.tag != "grabbable")
-                    currentObject = other.gameObject;
+                if (slatedObject.tag != "grabbable")
+                    slatedObject = other.gameObject;
             }
             else
-                currentObject = other.gameObject;
-            thisFrame = true;
+                slatedObject = other.gameObject;
         }
     }
 
@@ -38,8 +37,12 @@ public class couchActionBox : MonoBehaviour
         while (true)
         {
             yield return new WaitForFixedUpdate();
-            if (thisFrame == false)
-                currentObject = null;
+
+            if (thisFrame == false) { currentObject = slatedObject; continue; }
+
+            if (slatedObject && currentObject)
+                if (currentObject.tag == "Interactable" && slatedObject.tag == "grabbable") currentObject = slatedObject;
+
         }
     }
 }

@@ -10,7 +10,7 @@ public class couchPlayer : MonoBehaviour
     public enum subState { Idle, Moving, Aerial, None }
 
     [HideInInspector] public state currentState = state.Base;
-    [HideInInspector] public subState currentSubState = subState.Idle;
+     public subState currentSub = subState.Idle;
 
 
     [SerializeField] private Text DebugText;
@@ -62,17 +62,21 @@ public class couchPlayer : MonoBehaviour
     [HideInInspector] public float rightBumper;
 
     /*------------ FSM STATES ------------*/
-    couchHold HoldState;
-    couchIdle IdleState;
-    couchBase BaseState;
-    couchDead DeadState;
-    couchMoving MovingState;
-    couchThrow ThrowState;
+    private couchHold HoldState;
+    private couchBase BaseState;
+    private couchDead DeadState;
+    private couchThrow ThrowState;
+    /*------------------------------------*/
+    /*---------- FSM SUBSTATES -----------*/
+    private couchIdle IdleState;
+    private couchMoving MovingState;
+    private couchAerial AerialState;
     /*------------------------------------*/
     /*--------- CONSTANT SCRIPTS ---------*/
     private couchMovement MovementScript;
     private couchActionBox ActionBox;
-    private couchInteract InteractScript;
+    private couchActionBank InteractScript;
+    [SerializeField] private couchGroundCollider GroundCollider; 
     /*------------------------------------*/
 
     public void changeState(state newState)
@@ -92,6 +96,23 @@ public class couchPlayer : MonoBehaviour
         }
     }
 
+    public void changeSub(subState newSub)
+    {
+        currentSub = newSub;
+        switch (currentSub)
+        {
+            case subState.Idle:
+                IdleState.enabled = true;
+                break;
+            case subState.Moving:
+                MovingState.enabled = true;
+                break;
+            case subState.Aerial:
+                AerialState.enabled = true;
+                break;
+        }
+    }
+
 
     public float reMapStart;
     public float reMapTick;
@@ -100,19 +121,31 @@ public class couchPlayer : MonoBehaviour
 
     private void Awake()
     {
+        //Find helper scripts
+        MovementScript = GetComponent<couchMovement>();
+        ActionBox = GetComponentInChildren<couchActionBox>();
+        InteractScript = GetComponent<couchActionBank>();
+
         //Configure States
         BaseState = GetComponent<couchBase>();
         HoldState = GetComponent<couchHold>();
         ThrowState = GetComponent<couchThrow>();
-        MovementScript = GetComponent<couchMovement>();
-        ActionBox = GetComponentInChildren<couchActionBox>();
-        InteractScript = GetComponent<couchInteract>();
-        BaseState.Owner = HoldState.Owner = ThrowState.Owner = MovementScript.Owner = this;
-        BaseState.move = HoldState.move = ThrowState.move = MovementScript;
-        BaseState.actionBox = HoldState.actionBox = ThrowState.actionBox = ActionBox;
-        BaseState.interact = HoldState.interact = ThrowState.interact = InteractScript;
+        IdleState = GetComponent<couchIdle>();
+        MovingState = GetComponent<couchMoving>();
+        AerialState = GetComponent<couchAerial>();
 
-        BaseState.enabled = HoldState.enabled = ThrowState.enabled = false;
+
+        BaseState.Owner = HoldState.Owner = ThrowState.Owner = MovementScript.Owner = this;
+        IdleState.Owner = MovingState.Owner = AerialState.Owner = this;
+        BaseState.move = HoldState.move = ThrowState.move = MovementScript;
+        IdleState.move = MovingState.move = AerialState.move = MovementScript;
+        BaseState.actionBox = HoldState.actionBox = ThrowState.actionBox = ActionBox;
+        BaseState.action = HoldState.action = ThrowState.action = InteractScript;
+
+        BaseState.foot = HoldState.foot = ThrowState.foot = GroundCollider;
+        IdleState.foot = MovingState.foot = AerialState.foot = GroundCollider;
+
+        BaseState.enabled = HoldState.enabled = ThrowState.enabled = MovingState.enabled = false;
         changeState(state.Base);
 
         rb = GetComponent<Rigidbody>();
@@ -173,8 +206,6 @@ public class couchPlayer : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        placeCanvas();
-
         if (Input.GetAxis(rightBumperName) > 0.0f && !pingHold)
         {
             pingHold = true;
@@ -186,10 +217,15 @@ public class couchPlayer : MonoBehaviour
             pingHold = false;
             Ping();
         }
+        if(playerNum == 1) Debug.Log(currentSub);
     }
+
+    private void LateUpdate() { placeCanvas(); }
 
     public LayerMask mask;
 
+    [SerializeField] private float multi = 0.3f;
+    [SerializeField] private float dist = 1f;
     private void placeCanvas()
     {
         Ray downRay = new Ray(transform.position, Vector3.down);
@@ -199,6 +235,7 @@ public class couchPlayer : MonoBehaviour
             Vector3 temp = playerCanvas.transform.localPosition;
             temp.y = -1 * hit.distance + 0.015f;
             playerCanvas.transform.localPosition = temp;
+            playerCanvas.GetComponent<CanvasGroup>().alpha = 1 - (multi * (hit.distance - dist)); 
             //Debug.Log(hit.collider.gameObject);
         }
     }
